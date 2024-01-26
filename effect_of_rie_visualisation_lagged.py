@@ -70,37 +70,6 @@ def Total_Cov(model, n, p, T):
         return _total_cov_ar(n, T)
     elif model == 'VAR':
         return _total_cov_var(n, p, T)
-    
-    # elif model == 'VAR':
-        generate_VAR1(A, T, sigma, initial_value=None)
-        # Initialize matrices to hold non-lagged and lagged multivariate time series
-        XT_matrix = np.zeros((n, n, T-1))
-        XT_L1_matrix = np.zeros((n, n, T-1))
-
-        # Define the phi matrix for VAR(1) model
-        phi_matrix = np.random.uniform(low=0.0, high=0.5, size=(n, n))
-
-        # Generate the multivariate time series
-        X = generate_VAR1(phi_matrix, T, sigma)
-
-        # Generate and stack the time series
-        for i in range(n):
-            for j in range(n):
-                # Separate the non-lagged and lagged values
-                XT = X[1:, i]
-                XT_L1 = X[:-1, j]
-
-                # Stacking the time series in separate matrices
-                XT_matrix[i, j, :] = XT
-                XT_L1_matrix[i, j, :] = XT_L1
-        
-        # Vertically stack XT_matrix and XT_L1_matrix to form Z
-        Z = np.vstack([XT_matrix, XT_L1_matrix])
-
-        # Compute the lagged covariance matrix
-        lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T-1))
-
-        return (phi_matrix, lagged_cov_matrix)
 
 def _total_cov_null_case_lagged(n, T):
     """
