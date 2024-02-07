@@ -2,6 +2,7 @@
 Created on Thu Aug 16 17:32:18 2018
 
 @author: florent
+@modified by: bryan
 """
 import os
 import sys
@@ -11,11 +12,79 @@ from time import time
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
 from sklearn.isotonic import IsotonicRegression
+from statsmodels.tsa.arima_process import ArmaProcess
 
 plt.rcParams['text.usetex'] = True
 plt.rcParams["legend.fontsize"] = 15
 plt.rcParams['axes.labelsize'] = 15
 
+def total_cov_null_case_lagged(n, T):
+    """
+    Calculate the total covariance for a null case lagged time series.
+
+    Parameters:
+    n (int): Number of variables in the model.
+    T (int): Number of time steps.
+
+    Returns:
+    tuple: A tuple containing a list of zeros (theoretical singular values) and the lagged covariance matrix.
+    """
+    X = np.random.randn(n, T)
+    XT = X[:, 1:]  # Exclude the first column
+    XT_L1 = X[:, :-1]  # Exclude the last column
+
+    Z = np.vstack([XT, XT_L1])
+    lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T - 1))
+
+    return ([0] * n, lagged_cov_matrix)
+
+
+def total_cov_ar(n, T):
+    """
+    Calculate the total covariance for an AR time series.
+
+    Parameters:
+    n (int): Number of variables in the model.
+    T (int): Number of time steps.
+
+    Returns:
+    tuple: A tuple containing a list of theoretical singular values and the lagged covariance matrix.
+    """
+    XT_matrix = np.zeros((n, T - 1))
+    XT_L1_matrix = np.zeros((n, T - 1))
+
+    phi_values = np.random.uniform(-0.9, 0.9, size=n)
+    sigma_epsilon_squared = 1
+    theoretical_list = [(phi * sigma_epsilon_squared) / (1 - phi**2) for phi in phi_values]
+    theoretical_list = np.array(sorted(theoretical_list, reverse=True))
+
+    for i, phi in enumerate(phi_values):
+        ar1 = np.array([1, -phi])
+        ma1 = np.array([1])
+        AR_object = ArmaProcess(ar1, ma1)
+        X = AR_object.generate_sample(nsample=T)
+        
+        XT_matrix[i, :] = X[1:]
+        XT_L1_matrix[i, :] = X[:-1]
+
+    Z = np.vstack([XT_matrix, XT_L1_matrix])
+    lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T - 1))
+
+    return (theoretical_list, lagged_cov_matrix)
+
+def total_cov_var(n, p, T):
+    """
+    Calculate the total covariance for a VAR time series.
+
+    Parameters:
+    n (int): Number of variables in the model.
+    p (int): Unused parameter.
+    T (int): Number of time steps.
+
+    Returns:
+    tuple: A tuple containing a matrix of phi values and the lagged covariance matrix.
+    """
+    
 
 def f0(x):
     return (

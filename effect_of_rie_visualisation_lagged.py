@@ -2,10 +2,10 @@
 Created on Tue May  1 13:52:07 2018
 
 @author: florent
+@modified by: bryan
 """
 
 from base_functions import *
-from statsmodels.tsa.arima_process import ArmaProcess
 from statsmodels.tsa.api import VAR
 
 
@@ -14,38 +14,12 @@ figsize = (6, 4)          # Size of the figures
 do_legend = True          # Flag to control legend display in plots
 Nlinspace = 2500          # Number of points in linspace, used in plotting
 
-do_save = False            # Flag to control whether to save figures
+do_save = False           # Flag to control whether to save figures
 do_test = True            # Flag to control testing mode
 factor_test = 10 if do_test else 100  # Factor to modify a value based on test mode
 
 models = ['null_case_lagged', 'AR']           # List of models to be used
-np.random.seed(0)        # Setting a seed for reproducibility of random operations
-
-def generate_VAR1(A, T, sigma, initial_value=None):
-    """
-    Generate a VAR(1) time series.
-
-    Parameters:
-    A (numpy.ndarray): Coefficient matrix for the VAR(1) model.
-    T (int): Number of time steps.
-    sigma (float or numpy.ndarray): Standard deviation of the noise or noise covariance matrix.
-    initial_value (numpy.ndarray): Initial value of the time series.
-
-    Returns:
-    numpy.ndarray: Generated VAR(1) time series.
-    """
-    n = A.shape[0]  # Number of variables in the VAR model
-    if initial_value is None:
-        initial_value = np.zeros(n)
-    X = np.zeros((T, n))
-    X[0] = initial_value
-
-    for t in range(1, T):
-        noise = np.random.multivariate_normal(np.zeros(n), sigma)
-        X[t] = np.dot(A, X[t-1]) + noise
-
-    return X
-
+np.random.seed(42)        # Setting a seed for reproducibility of random operations
 
 
 def Total_Cov(model, n, p, T):
@@ -65,78 +39,11 @@ def Total_Cov(model, n, p, T):
         raise ValueError(f"Model '{model}' is not supported. Supported models are {models}.")
     
     if model == 'null_case_lagged':
-        return _total_cov_null_case_lagged(n, T)
+        return total_cov_null_case_lagged(n, T)
     elif model == 'AR':
-        return _total_cov_ar(n, T)
+        return total_cov_ar(n, T)
     elif model == 'VAR':
-        return _total_cov_var(n, p, T)
-
-def _total_cov_null_case_lagged(n, T):
-    """
-    Calculate the total covariance for a null case lagged time series.
-
-    Parameters:
-    n (int): Number of variables in the model.
-    T (int): Number of time steps.
-
-    Returns:
-    tuple: A tuple containing a list of zeros (theoretical singular values) and the lagged covariance matrix.
-    """
-    X = np.random.randn(n, T)
-    XT = X[:, 1:]  # Exclude the first column
-    XT_L1 = X[:, :-1]  # Exclude the last column
-
-    Z = np.vstack([XT, XT_L1])
-    lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T - 1))
-
-    return ([0] * n, lagged_cov_matrix)
-
-
-def _total_cov_ar(n, T):
-    """
-    Calculate the total covariance for an AR time series.
-
-    Parameters:
-    n (int): Number of variables in the model.
-    T (int): Number of time steps.
-
-    Returns:
-    tuple: A tuple containing a list of theoretical singular values and the lagged covariance matrix.
-    """
-    XT_matrix = np.zeros((n, T - 1))
-    XT_L1_matrix = np.zeros((n, T - 1))
-
-    phi_values = np.random.uniform(-0.5, 0.5, size=n)
-    sigma_epsilon_squared = 1
-    theoretical_list = sorted([(phi * sigma_epsilon_squared) / (1 - phi**2) for phi in phi_values], reverse=True)
-    theoretical_list = np.array(theoretical_list)
-
-    for i, phi in enumerate(phi_values):
-        ar1 = np.array([1, -phi])
-        ma1 = np.array([1])
-        AR_object = ArmaProcess(ar1, ma1)
-        X = AR_object.generate_sample(nsample=T)
-        
-        XT_matrix[i, :] = X[1:]
-        XT_L1_matrix[i, :] = X[:-1]
-
-    Z = np.vstack([XT_matrix, XT_L1_matrix])
-    lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T - 1))
-
-    return (theoretical_list, lagged_cov_matrix)
-
-def _total_cov_var(n, p, T):
-    """
-    Calculate the total covariance for a VAR time series.
-
-    Parameters:
-    n (int): Number of variables in the model.
-    p (int): Unused parameter.
-    T (int): Number of time steps.
-
-    Returns:
-    tuple: A tuple containing a matrix of phi values and the lagged covariance matrix.
-    """
+        return total_cov_var(n, p, T)
 
 
 def histo(E, ax, color="b", reg_coeff=1, label="", linewidth=1):

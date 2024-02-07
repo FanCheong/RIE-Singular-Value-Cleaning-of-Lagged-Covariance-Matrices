@@ -7,11 +7,10 @@ p = 1  # Lag order
 
 # Generate coefficient matrix
 np.random.seed(42)  # Set seed for reproducibility
-coefficients = np.random.uniform(-0.9, 0.9, size=(n, n))
-# coefficients = np.zeros((n,n))
+coefficients = np.zeros((n,n))
 
-# for i in range(1,n):
-#     coefficients[i, i-1] = np.random.uniform(-0.9, 0.9)
+for i in range(1,n):
+    coefficients[i, i-1] = np.random.uniform(-0.9, 0.9)
 
 # Set the error covariance matrix (replace this with your desired covariance matrix)
 error_covariance = np.eye(n)  # Identity matrix for simplicity
