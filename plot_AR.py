@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from statsmodels.tsa.arima_process import ArmaProcess
 
 figsize = (6, 4)          # Size of the figures
-n = 5
+n = 3
 T = 100
 
 XT_matrix = np.zeros((n, T - 1))
@@ -20,10 +20,14 @@ for i, phi in enumerate(phi_values):
     ma1 = np.array([1])
     AR_object = ArmaProcess(ar1, ma1)
     X = AR_object.generate_sample(nsample=T)
+    print("X", X)
     
     XT_matrix[i, :] = X[1:]
     XT_L1_matrix[i, :] = X[:-1]
-
+    # print(XT_matrix)
+    # print(XT_L1_matrix)
+    break
+'''
 Z = np.vstack([XT_matrix, XT_L1_matrix])
 lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T - 1))
 
@@ -35,3 +39,4 @@ ax.set_xlabel('Time')
 ax.set_ylabel('Value')
 ax.legend()
 plt.show()
+'''

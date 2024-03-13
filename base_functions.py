@@ -55,8 +55,8 @@ def total_cov_ar(n, T):
 
     phi_values = np.random.uniform(-0.9, 0.9, size=n)
     sigma_epsilon_squared = 1
-    theoretical_list = [(phi * sigma_epsilon_squared) / (1 - phi**2) for phi in phi_values]
-    theoretical_list = np.array(sorted(theoretical_list, reverse=True))
+    theoretical_list_AR = [(phi * sigma_epsilon_squared) / (1 - phi**2) for phi in phi_values]
+    theoretical_list_AR = np.array(sorted(theoretical_list_AR, reverse=True))
 
     for i, phi in enumerate(phi_values):
         ar1 = np.array([1, -phi])
@@ -67,24 +67,54 @@ def total_cov_ar(n, T):
         XT_matrix[i, :] = X[1:]
         XT_L1_matrix[i, :] = X[:-1]
 
-    Z = np.vstack([XT_matrix, XT_L1_matrix])
-    lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T - 1))
+    Z_AR = np.vstack([XT_matrix, XT_L1_matrix])
+    lagged_cov_matrix_AR = np.asmatrix((Z_AR @ Z_AR.T) / (T - 1))
 
-    return (theoretical_list, lagged_cov_matrix)
+    return (theoretical_list_AR, lagged_cov_matrix_AR)
 
-def total_cov_var(n, p, T):
+def total_cov_var(n, T, lag=1):
     """
     Calculate the total covariance for a VAR time series.
 
     Parameters:
     n (int): Number of variables in the model.
-    p (int): Unused parameter.
     T (int): Number of time steps.
+    lag (int): Lag order, default = 1.
 
     Returns:
     tuple: A tuple containing a matrix of phi values and the lagged covariance matrix.
     """
+    # Generate coefficient matrix
+    np.random.seed(42)  # Set seed for reproducibility
+    coefficients = np.zeros((n,n))
+
+    for i in range(1,n):
+        coefficients[i, i-1] = np.random.uniform(-0.9, 0.9)
+
+    # Set the error covariance matrix
+    error_covariance = np.eye(n)  # Identity matrix for simplicity
+
+    # Initialize the time series matrix
+    X = np.zeros((T, n))
+
+    # Generate the VAR process
+    for t in range(lag, T):
+        lagged_values = X[t-lag:t, :].flatten()
+        error_terms = np.random.multivariate_normal(np.zeros(n), error_covariance)
+        X[t, :] = coefficients @ lagged_values + error_terms
+
+    # Prepare the data
+    XT_matrix = X[1:, :]  # Current values (excluding the first row to align with lags)
+    XT_L1_matrix = X[:-1, :]  # Lagged values (excluding the last row)
+
+    # Stack the matrices vertically for covariance calculation
+    Z_VAR = np.vstack([XT_matrix.T, XT_L1_matrix.T])
+
+    # Calculate the lagged covariance matrix
+    lagged_cov_matrix_VAR1 = np.asmatrix((Z_VAR @ Z_VAR.T) / (T - 1))
     
+    return ([0] * n, lagged_cov_matrix_VAR1)
+
 
 def f0(x):
     return (
@@ -409,6 +439,7 @@ def RIE_Cross_Covariance(
     if Return_Ancient_SV or Return_New_SV or Return_Sing_Vectors:
         return tuple(res)
     else:
+        print("Result shape in RIE CC function", res[0].shape)
         return res[0]
 
 

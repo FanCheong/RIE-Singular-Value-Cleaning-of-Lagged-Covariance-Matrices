@@ -14,11 +14,11 @@ figsize = (6, 4)          # Size of the figures
 do_legend = True          # Flag to control legend display in plots
 Nlinspace = 2500          # Number of points in linspace, used in plotting
 
-do_save = False           # Flag to control whether to save figures
+do_save = True            # Flag to control whether to save figures
 do_test = True            # Flag to control testing mode
 factor_test = 10 if do_test else 100  # Factor to modify a value based on test mode
 
-models = ['null_case_lagged', 'AR']           # List of models to be used
+models = ['AR', 'VAR']           # List of models to be used
 np.random.seed(42)        # Setting a seed for reproducibility of random operations
 
 
@@ -43,7 +43,7 @@ def Total_Cov(model, n, p, T):
     elif model == 'AR':
         return total_cov_ar(n, T)
     elif model == 'VAR':
-        return total_cov_var(n, p, T)
+        return total_cov_var(n, T)
 
 
 def histo(E, ax, color="b", reg_coeff=1, label="", linewidth=1):
@@ -129,10 +129,12 @@ def plot_results(my_model, True_s, Emp_Sing_Val, Clean_Sing_Val, RIE_flag, file_
     # plt.show()
     fig, ax = plt.subplots(figsize=figsize, tight_layout=True)
     linestyle = "-"
+    fro_norm_empirical = np.sqrt(np.sum((np.array(True_s) - np.array(Emp_Sing_Val)) ** 2))
+    fro_norm_cleaned = np.sqrt(np.sum((np.array(True_s) - np.array(Clean_Sing_Val)) ** 2))
     ax.plot(True_s, Emp_Sing_Val, linestyle=linestyle, color="k",
-            label=f"{sv_labels['empirical']}, 'MSE={np.mean((np.array(True_s) - np.array(Emp_Sing_Val)) ** 2) * 5:.2f}")
+            label=f"{sv_labels['empirical']}, 'L2 Norm={fro_norm_empirical:.2f}")
     ax.plot(True_s, Clean_Sing_Val, linestyle=linestyle, color="b",
-            label=f"{sv_labels['cleaned']}, 'MSE={np.mean((np.array(True_s) - np.array(Clean_Sing_Val)) ** 2) * 5:.2f}")
+            label=f"{sv_labels['cleaned']}, 'L2 Norm={fro_norm_cleaned:.2f}")
     ax.plot(True_s, True_s, linestyle=linestyle, color="r",
             label=sv_labels['true'])
     plt.tick_params(axis="both", which="major", labelsize=15)
@@ -145,8 +147,8 @@ def plot_results(my_model, True_s, Emp_Sing_Val, Clean_Sing_Val, RIE_flag, file_
     # plt.show()
     plt.close()
 
-ns = ps =          [250]
-Nlinspaces = Ts =  [2500]
+ns = ps =          [5000, 2500, 1250, 500, 250, 125, 25]
+Nlinspaces = Ts =  [2500, 2500, 2500, 2500, 2500, 2500, 2500]
 
 for my_model in models:
     for n, p, T, Nlinspace in zip(ns, ps, Ts, Nlinspaces):
