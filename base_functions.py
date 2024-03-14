@@ -53,7 +53,7 @@ def total_cov_ar(n, T):
     XT_matrix = np.zeros((n, T - 1))
     XT_L1_matrix = np.zeros((n, T - 1))
 
-    phi_values = np.random.uniform(-0.9, 0.9, size=n)
+    phi_values = np.random.uniform(-0.5, 0.5, size=n)
     sigma_epsilon_squared = 1
     theoretical_list_AR = [(phi * sigma_epsilon_squared) / (1 - phi**2) for phi in phi_values]
     theoretical_list_AR = np.array(sorted(theoretical_list_AR, reverse=True))
@@ -89,7 +89,7 @@ def total_cov_var(n, T, lag=1):
     coefficients = np.zeros((n,n))
 
     for i in range(1,n):
-        coefficients[i, i-1] = np.random.uniform(-0.9, 0.9)
+        coefficients[i, i-1] = np.random.uniform(-0.5, 0.5)
 
     # Set the error covariance matrix
     error_covariance = np.eye(n)  # Identity matrix for simplicity
