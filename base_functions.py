@@ -3,6 +3,11 @@ Created on Thu Aug 16 17:32:18 2018
 
 @author: florent
 @modified by: bryan
+
+This script contains the base functions for the RIE algorithm. The functions
+are used to calculate the lagged covariance and true singular values for a 
+random Gaussian lagged time series and an AR time series. The functions also
+contain the RIE cleaning algorithm for the lagged covariance matrix.
 """
 
 
