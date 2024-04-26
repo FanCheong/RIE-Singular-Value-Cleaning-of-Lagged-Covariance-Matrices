@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from time import time
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.integrate import quad
 from sklearn.isotonic import IsotonicRegression
 from statsmodels.tsa.arima_process import ArmaProcess
@@ -18,9 +19,10 @@ plt.rcParams['text.usetex'] = True
 plt.rcParams["legend.fontsize"] = 15
 plt.rcParams['axes.labelsize'] = 15
 
-def total_cov_null_case_lagged(n, T):
+
+def total_cov_random_gaussian(n, T):
     """
-    Calculate the total covariance for a null case lagged time series.
+    Calculate the total covariance for a random gaussian lagged time series.
 
     Parameters:
     n (int): Number of variables in the model.
@@ -29,12 +31,17 @@ def total_cov_null_case_lagged(n, T):
     Returns:
     tuple: A tuple containing a list of zeros (theoretical singular values) and the lagged covariance matrix.
     """
-    X = np.random.randn(n, T)
-    XT = X[:, 1:]  # Exclude the first column
-    XT_L1 = X[:, :-1]  # Exclude the last column
+    # Generate the random Gaussian time series
+    X = np.matrix(np.random.randn(n, T))
 
-    Z = np.vstack([XT, XT_L1])
-    lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T - 1))
+    XT = X[:, 1:]  # Exclude the first 1 columns
+    XT_L1 = X[:, :-1]  # Exclude the last 1 columns
+
+    Z = np.vstack([XT, XT_L1]) # Stack the matrices vertically for covariance calculation
+    
+    # Apply mean centering
+    Z = Z - np.mean(Z, axis=1)
+    lagged_cov_matrix = (Z @ Z.T) / (T - 1)
 
     return ([0] * n, lagged_cov_matrix)
 
@@ -50,233 +57,36 @@ def total_cov_ar(n, T):
     Returns:
     tuple: A tuple containing a list of theoretical singular values and the lagged covariance matrix.
     """
-    XT_matrix = np.zeros((n, T - 1))
-    XT_L1_matrix = np.zeros((n, T - 1))
+    # Initialize matrices
+    XT_matrix = np.zeros((n, T))
+    XT_L1_matrix = np.zeros((n, T))
 
-    phi_values = np.random.uniform(-0.5, 0.5, size=n)
+    # Generate AR(1) coefficients
+    phi_values = np.random.uniform(0.0, 0.9, size=n)
     sigma_epsilon_squared = 1
-    theoretical_list_AR = [(phi * sigma_epsilon_squared) / (1 - phi**2) for phi in phi_values]
-    theoretical_list_AR = np.array(sorted(theoretical_list_AR, reverse=True))
+    
+    # Calculate theoretical singular values for the diagonals
+    true_s = [(phi * sigma_epsilon_squared / (1 - phi ** 2)) for phi in phi_values]
 
+    # Simulate the AR(1) process
     for i, phi in enumerate(phi_values):
         ar1 = np.array([1, -phi])
-        ma1 = np.array([1])
-        AR_object = ArmaProcess(ar1, ma1)
+        AR_object = ArmaProcess(ar1, [1])
         X = AR_object.generate_sample(nsample=T)
         
-        XT_matrix[i, :] = X[1:]
-        XT_L1_matrix[i, :] = X[:-1]
-
-    Z_AR = np.vstack([XT_matrix, XT_L1_matrix])
-    lagged_cov_matrix_AR = np.asmatrix((Z_AR @ Z_AR.T) / (T - 1))
-
-    return (theoretical_list_AR, lagged_cov_matrix_AR)
-
-def total_cov_var(n, T, lag=1):
-    """
-    Calculate the total covariance for a VAR time series.
-
-    Parameters:
-    n (int): Number of variables in the model.
-    T (int): Number of time steps.
-    lag (int): Lag order, default = 1.
-
-    Returns:
-    tuple: A tuple containing a matrix of phi values and the lagged covariance matrix.
-    """
-    # Generate coefficient matrix
-    np.random.seed(42)  # Set seed for reproducibility
-    coefficients = np.zeros((n,n))
-
-    for i in range(1,n):
-        coefficients[i, i-1] = np.random.uniform(-0.5, 0.5)
-
-    # Set the error covariance matrix
-    error_covariance = np.eye(n)  # Identity matrix for simplicity
-
-    # Initialize the time series matrix
-    X = np.zeros((T, n))
-
-    # Generate the VAR process
-    for t in range(lag, T):
-        lagged_values = X[t-lag:t, :].flatten()
-        error_terms = np.random.multivariate_normal(np.zeros(n), error_covariance)
-        X[t, :] = coefficients @ lagged_values + error_terms
-
-    # Prepare the data
-    XT_matrix = X[1:, :]  # Current values (excluding the first row to align with lags)
-    XT_L1_matrix = X[:-1, :]  # Lagged values (excluding the last row)
-
-    # Stack the matrices vertically for covariance calculation
-    Z_VAR = np.vstack([XT_matrix.T, XT_L1_matrix.T])
-
-    # Calculate the lagged covariance matrix
-    lagged_cov_matrix_VAR1 = np.asmatrix((Z_VAR @ Z_VAR.T) / (T - 1))
+        XT_matrix[i, :] = X
+        XT_L1_matrix[i, :] = np.roll(X, shift=1)  # Shift by tau
     
-    return ([0] * n, lagged_cov_matrix_VAR1)
+    # Stack original and lagged matrices
+    Z = np.vstack([XT_matrix, XT_L1_matrix])
 
+    # Apply mean centering
+    Z = Z - Z.mean(axis=1, keepdims=True)
 
-def f0(x):
-    return (
-            x
-            * (3 - x) ** 2
-            * ((x - 1.7) ** 2 + 0.1)
-            * (((x - 2.6) ** 2 + 1) ** (-1) + 1)
-            * (((x - 0.9) ** 2 + 1) ** (-1) + 1)
-            * (3.1 - x) ** (-2)
-    )
+    # Calculate lagged covariance matrix
+    lagged_cov_matrix = np.asmatrix((Z @ Z.T) / (T - 1))
 
-
-CONSTANT_Z = quad(f0, 0, 3)[0] ** (-1)
-
-
-def the_fancy_density(x):
-    return CONSTANT_Z * f0(x)
-
-
-def the_final_fancy_density(y):
-    min_s, max_s = 0.2, 0.8
-    return (3 / (max_s - min_s)) * the_fancy_density(
-        -3 * (y - min_s) / (max_s - min_s) + 3
-    )
-
-
-def the_fancy_ran_var():
-    min_s, max_s = 0.2, 0.8
-    a, b = 0., 3.
-    x = np.random.uniform(low=a, high=b)
-    y = np.random.uniform()
-    while y > the_fancy_density(x):
-        x = np.random.uniform(low=a, high=b)
-        y = np.random.uniform()
-    return min_s + (max_s - min_s) * (3 - x) / 3
-
-
-def my_int(x):
-    return int(round(x))
-
-
-def Haar_Orthogonal(n=100):
-    """Haar distributed orthogonal matrix sampled according to Mezzadri's arXiv:math-ph/0609050 algo"""
-    M = np.random.randn(n, n)
-    Q, R = np.linalg.qr(M)
-    D = np.diag(R)
-    D = D / np.abs(D)
-    return np.matrix(Q) * np.diag(D)
-
-
-def Haar_Grassman_Real(n=100, r=100):
-    """r first columns of a Haar distributed n by n Haar distributed orthogonal matrix sampled according to Mezzadri's arXiv:math-ph/0609050 algo"""
-    return Haar_Orthogonal(n)[:, :r]
-
-
-def Rectangular_Real_SRT(n=5, p=8, s=np.linspace(0.2, 0.8, 3)):
-    r = len(s)
-    return Haar_Grassman_Real(n, r) * np.diag(s) * (Haar_Grassman_Real(p, r).T)
-
-
-def Rectangular_Real_SRT_Reg(n=5, p=8, mins=0.2, Maxs=0.8):
-    return Rectangular_Real_SRT(n=n, p=p, s=np.linspace(mins, Maxs, min(n, p)))
-
-
-def Wishart(n=100, p=100, real=True):
-    """Real or complex n by n Wishart matrix normalized in such a way that
-    its spectrum converges to [a,b] with density np.sqrt((b-x)*(x-a))/(2*np.pi*c*x)
-    with a,b=(1-np.sqrt(c))**2,(1+np.sqrt(c))**2 for c=n/p"""
-    if real:
-        Y = np.matrix(np.random.randn(n, p))
-        return Y * (Y.T) / p
-    else:
-        Y = 2 ** (-0.5) * np.matrix(np.random.randn(n, p) + 1j * np.random.randn(n, p))
-        return Y * (Y.H) / p
-
-
-def Heavy_Tailed_Empirical_Covariance_Matrix(n=100, p=100, alpha=2.5):
-    """Empirical covariance matrix of p vectors with size n whose entries
-    are iid distributed as \pm U^{-1/alpha}, with U uniform on [0,1]
-    and \pm a random sign"""
-    X = np.matrix(
-        ((np.random.rand(n, p)) ** (-1 / float(alpha)))
-        * (2 * np.random.binomial(1, 0.5, size=(n, p)) - 1)
-    )
-    return X * (X.T) / p
-
-
-def Empirical_Covariance(T=100, C=np.eye(100)):
-    """Empirical n by n covariance matrix of a sample of T copies of a centered gaussian vector with covariance C"""
-    n = np.shape(C)[0]
-    Y = np.matrix(np.random.multivariate_normal(mean=[0] * n, cov=C, size=T))
-    return Y.T * Y / T
-
-
-def Heavy_Tailed_Empirical_Covariance_Matrix(n=100, p=100, alpha=2.5):
-    """Empirical covariance matrix of p vectors with size n whose entries
-    are iid distributed as \pm U^{-1/alpha}, with U uniform on [0,1]
-    and \pm a random sign"""
-    X = np.matrix(
-        ((np.random.rand(n, p)) ** (-1 / float(alpha)))
-        * (2 * np.random.binomial(1, 0.5, size=(n, p)) - 1)
-    )
-    return X * (X.T) / p
-
-
-def my_model(T, model=1):
-    alpha, beta = .4, .7
-    proportion_info = .8
-    n, p = my_int(alpha * T), my_int(beta * T)
-    m = n + p
-    pp = my_int(proportion_info * n)
-    if model == 1:
-        return (n, p, np.eye(m) + Wishart(m, pp) + np.ones((m, m)) / float(m))
-    elif model == 2:
-        a, b = .2, .8
-        C = Rectangular_Real_SRT_Reg(n, p, a, b)
-        return (n, p, np.matrix(np.bmat([[np.eye(n), C], [C.T, np.eye(p)]])))
-    elif model == 3:
-        return (n, p, np.eye(m))
-    elif model == 4:
-        al, bet = .1, 1.
-        alpha_tail = 15
-        return (n, p,
-                np.eye(m) + Heavy_Tailed_Empirical_Covariance_Matrix(m, pp, alpha_tail) / float(pp ** al) + np.ones(
-                    (m, m)) / float(m ** bet))
-    elif model == 5:
-        c = 2
-        a, b = .2, .8
-        C = Rectangular_Real_SRT(n, p, np.linspace(a, b, n) ** c)
-        return (n, p, np.matrix(np.bmat([[np.eye(n), C], [C.T, np.eye(p)]])))
-    elif model == 6:
-        center, widtha, widthb, c, epsi = .5, .1, .3, .8, .01
-        s = [min(1 - epsi, max(epsi, center + np.sign(x) * np.abs(x) ** c)) for x in np.linspace(-widtha, widthb, n)]
-        C = Rectangular_Real_SRT(n, p, s)
-        return (n, p, np.matrix(np.bmat([[np.eye(n), C], [C.T, np.eye(p)]])))
-    elif model == 7:
-        al, bet = .1, 1.
-        alpha_tail = 15
-        center, widtha, widthb, c, epsi = .5, .1, .3, .8, .01
-        s = [min(1 - epsi, max(epsi, center + np.sign(x) * np.abs(x) ** c)) for x in np.linspace(-widtha, widthb, n)]
-        C = Rectangular_Real_SRT(n, p, s)
-        TrueTotalCovariance = np.matrix(np.bmat([[np.eye(n), C], [C.T, np.eye(p)]]))
-        return (n, p, TrueTotalCovariance + Heavy_Tailed_Empirical_Covariance_Matrix(m, pp, alpha_tail) / float(
-            pp ** al) + np.ones((m, m)) / float(m ** bet))
-    elif model == 8:
-        a, b = .2, .8
-        C = Rectangular_Real_SRT(n=n, p=p, s=list(np.linspace(a, b, pp)) + [0] * (n - pp))
-        return (n, p, np.matrix(np.bmat([[np.eye(n), C], [C.T, np.eye(p)]])))
-    elif model == 9:
-        al_Beta_law, beta_Beta_law = 2, 3
-        a, b = .2, .8
-        C = Rectangular_Real_SRT(n, p,
-                                 s=a + (b - a) * np.random.beta(al_Beta_law,
-                                                                beta_Beta_law,
-                                                                size=n))
-        return (n, p, np.matrix(np.bmat([[np.eye(n), C], [C.T, np.eye(p)]])))
-    elif model == 10:
-        Ech = []
-        for i in range(n):
-            Ech.append(the_fancy_ran_var())
-        C = Rectangular_Real_SRT(n, p, s=np.array(Ech))
-        return (n, p, np.matrix(np.bmat([[np.eye(n), C], [C.T, np.eye(p)]])))
+    return (true_s, lagged_cov_matrix)
 
 
 def check_matrix(M, n, p):
@@ -284,10 +94,10 @@ def check_matrix(M, n, p):
     assert isinstance(n, int)
     assert isinstance(p, int)
     assert isinstance(M, np.matrix), str(type(M))
-    assert M.shape == (n, p), f"{M.shape}"
+    assert M.shape == (n, n), f"{M.shape}"
 
 
-def get_submatrices_of_full_cov_mat(n, p, CZZ):
+def get_submatrices_of_lagged_cov_mat(n, p, CZZ):
     check_matrix(CZZ, 2*n, 2*n)
     CXX = CZZ[np.ix_(range(n), range(n))]
     CYY = CZZ[np.ix_(range(n, 2*n), range(n, 2*n))]
@@ -299,13 +109,13 @@ def Coeffs(n, p, U, V, CXXemp, CYYemp):
     for M in [U, CXXemp]:
         check_matrix(M, n, n)
     for M in [V, CYYemp]:
-        check_matrix(M, p, p)
-    Coeff_A, Coeff_B, Coeff_B_n_to_p = [], [], 0.
+        check_matrix(M, n, n)
+    Coeff_A, Coeff_B, Coeff_B_n_to_p = [], [], 0.0
     for k in range(n):
-        Coeff_A.append((U[:, k].T * CXXemp * U[:, k])[0, 0])
-        Coeff_B.append((V[k, :] * CYYemp * (V[k, :].T))[0, 0])
-    for k in range(n, p):
-        Coeff_B_n_to_p += (V[k, :] * CYYemp * (V[k, :].T))[0, 0]
+        Coeff_A.append((U[:, k].T * CXXemp * 
+                        U[:, k]).item())  # Coefficients from X
+        Coeff_B.append((V[k, :] * CYYemp * 
+                        (V[k, :].T)).item()) # Coefficients from lagged X
     return Coeff_A, Coeff_B, Coeff_B_n_to_p
 
 
@@ -326,14 +136,14 @@ def approx_L_or_imLoimH(z,
                         algo_used=1,
                         return_L=False):
     assert algo_used in (1, 2), f"{algo_used}"
-    assert isinstance(n, int) and isinstance(p, int) and n <= p
+    assert isinstance(n, int)
     if algo_used == 1:
         if any([x is None for x in [Coeff_A, Coeff_B, Coeff_B_n_to_p]]):
             if U is None or V is None:
-                check_matrix(CXYemp, n, p)
+                check_matrix(CXYemp, n, n)
                 U, s, V = np.linalg.svd(CXYemp, full_matrices=True)
             check_matrix(CXXemp, n, n)
-            check_matrix(CYYemp, p, p)
+            check_matrix(CYYemp, n, n)
             Coeff_A, Coeff_B, Coeff_B_n_to_p = Coeffs(n=n,
                                                       p=p,
                                                       U=U,
@@ -346,7 +156,7 @@ def approx_L_or_imLoimH(z,
     ztwo = z ** 2
     if stwo is None:
         if s is None:
-            check_matrix(CXYemp, n, p)
+            check_matrix(CXYemp, n, n)
             s = np.linalg.svd(CXYemp, compute_uv=False)
         stwo = s ** 2
     assert isinstance(stwo, np.ndarray) and len(stwo) == n
@@ -379,11 +189,10 @@ def RIE_Cross_Covariance(
         isotonic=False,
         exponent_eta=0.5,
         c_eta=1,
-        algo_used=1
-):
+        algo_used=1):
     """Flo's algo. We need n\leq p, Etotale needs to be of the type np.matrix"""
     assert algo_used in (1, 2), f"{algo_used}"
-    CXXemp, CYYemp, CXYemp = get_submatrices_of_full_cov_mat(n=n, p=p, CZZ=CZZemp)
+    CXXemp, CYYemp, CXYemp = get_submatrices_of_lagged_cov_mat(n=n, p=p, CZZ=CZZemp)
     U, s, V = np.linalg.svd(CXYemp, full_matrices=True)
     if algo_used == 1:
         Coeff_A, Coeff_B, Coeff_B_n_to_p = Coeffs(n=n,
@@ -395,7 +204,7 @@ def RIE_Cross_Covariance(
     else:
         Coeff_A, Coeff_B, Coeff_B_n_to_p = None, None, None
     stwo = s ** 2
-    eta = c_eta * (n * p * T) ** (-exponent_eta / 3.0)
+    eta = c_eta * (n ** 2 * T) ** (-exponent_eta / 3.0)
     new_s = [max(0, approx_L_or_imLoimH(z=s[k] + 1j * eta,
                                         n=n,
                                         p=p,
@@ -423,12 +232,14 @@ def RIE_Cross_Covariance(
     if return_all:
         ir = IsotonicRegression()
         new_s_isotonic = ir.fit_transform(np.arange(n)[::-1], np.array(new_s))
-        return s, U, V, new_s, new_s_isotonic
+        U, V = np.matrix(U), np.matrix(V)
+        reconstructed_CXY = U * np.diag(new_s) * V
+        return s, U, V, new_s, new_s_isotonic, reconstructed_CXY
     if isotonic:
         ir = IsotonicRegression()
         new_s = ir.fit_transform(np.arange(n)[::-1], np.array(new_s))
-    U, V = np.matrix(U), np.matrix(V[range(n), :]).T
-    res = [U * np.diag(new_s) * (V.T)]
+    U, V = np.matrix(U), np.matrix(V)
+    res = [U * np.diag(new_s) * V]
     if Return_Ancient_SV:
         res.append(s)
     if Return_New_SV:
@@ -441,38 +252,3 @@ def RIE_Cross_Covariance(
     else:
         print("Result shape in RIE CC function", res[0].shape)
         return res[0]
-
-
-def RIE_Covariance(
-        Cemp, T, Return_Ancient_Spectrum=False, Return_New_Spectrum=False, adjust_trace=True
-):
-    """Almost Bouchaud's RIE for the true covariance matrix out of the empirical covariance matrix Cemp made out of a sample of T copies of the signal"""
-    lam, U = np.linalg.eigh(Cemp)
-    U = np.matrix(U)
-    n = len(lam)
-    q = n / float(T)
-    eta = n ** (-0.5)
-    new_lam = []
-    for k in range(n):
-        oldla = lam[k]
-        new_lam.append(
-            oldla
-            * (
-                    np.abs(
-                        1
-                        - q
-                        + q * oldla * np.mean(1 / (oldla + eta * 1j - np.delete(lam, k)))
-                    )
-                    ** (-2)
-            )
-        )
-    if adjust_trace:
-        new_lam = np.array(new_lam) * (sum(lam) / sum(new_lam))
-    if Return_Ancient_Spectrum and Return_New_Spectrum:
-        return (U * np.matrix(np.diag(new_lam)) * (U.T), lam, new_lam)
-    elif Return_Ancient_Spectrum:
-        return (U * np.matrix(np.diag(new_lam)) * (U.T), lam)
-    elif Return_New_Spectrum:
-        return (U * np.matrix(np.diag(new_lam)) * (U.T), new_lam)
-    else:
-        return U * np.matrix(np.diag(new_lam)) * (U.T)

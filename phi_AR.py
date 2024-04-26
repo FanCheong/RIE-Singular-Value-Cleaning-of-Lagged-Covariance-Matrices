@@ -1,11 +1,11 @@
 import numpy as np
 from base_functions import *
 
-def recreate_phis(B, sigma_epsilon_squared=1):
-    B_nonzero = np.where(B == 0, np.finfo(float).eps, B)
-    discriminant = sigma_epsilon_squared ** 2 + 4 * B_nonzero ** 2
-    phi_plus = (- sigma_epsilon_squared + np.sqrt(discriminant)) / (2 * B_nonzero)
-    phi_minus = (- sigma_epsilon_squared - np.sqrt(discriminant)) / (2 * B_nonzero)
+def recreate_phis(gamma, sigma_epsilon_squared=1):
+    gamma_nonzero = np.where(gamma == 0, np.finfo(float).eps, gamma)
+    discriminant = sigma_epsilon_squared ** 2 + 4 * gamma_nonzero ** 2
+    phi_plus = (- sigma_epsilon_squared + np.sqrt(discriminant)) / (2 * gamma_nonzero)
+    phi_minus = (- sigma_epsilon_squared - np.sqrt(discriminant)) / (2 * gamma_nonzero)
     return (phi_plus, phi_minus)
 
 
@@ -50,11 +50,10 @@ def total_cov_ar_phi(n, T):
 
     return (phi_values, theoretical_list_AR, lagged_cov_matrix_AR)
 
-n = 1000
+n = 1250
 T = 2500
 phi_values, True_S, Etotale = total_cov_ar_phi(n, T)
 phi_values = np.array(phi_values)
 phi_plus, phi_minus = recreate_phis(True_S)
 
 compare_phis(phi_values, phi_plus, phi_minus)
-
