@@ -5,6 +5,7 @@ Created on Tue May  1 13:52:07 2018
 @modified by: bryan
 """
 
+
 from base_functions import *
 
 
@@ -13,13 +14,13 @@ figsize = (12, 8)                    # Size of the figures
 do_save = 1                          # Flag to control whether to save figures
 do_show = 0                          # Flag to control whether to show figures
 do_test = 0                          # Flag to control testing mode
-models = ['AR']   # List of models to be used
+models = ['Random Gaussian', 'AR']   # List of models to be used
 np.random.seed(42)                   # Setting a seed for reproducibility of random operations
 
 
 # Number of variables and time steps
 if do_test:
-    ns = ps = [100, 1000]
+    ns = ps = [10, 1000]
     Ts = [2500, 2500]
 else:
     ns = ps = [250, 500, 1250, 2500]

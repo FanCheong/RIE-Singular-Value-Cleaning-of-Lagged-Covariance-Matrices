@@ -4,6 +4,8 @@ Created on Thu Aug 16 17:32:18 2018
 @author: florent
 @modified by: bryan
 """
+
+
 import os
 import sys
 import numpy as np
@@ -14,6 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.integrate import quad
 from sklearn.isotonic import IsotonicRegression
 from statsmodels.tsa.arima_process import ArmaProcess
+
 
 plt.rcParams['text.usetex'] = True
 plt.rcParams["legend.fontsize"] = 15
