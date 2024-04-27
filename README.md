@@ -39,3 +39,8 @@ To test if the singular values convert to the correct phi values run the phi_AR.
 ```bash
 python phi_AR.py
 ```
+
+## Notes on Implementation
+
+### Exponent Discrepancy
+Please note that there is a discrepancy in the exponent values referenced in the project. The original paper referenced in this project specifies the exponent as `-1/12`. However, in the implementation within this codebase, as well as in the inaugural lecture, the exponent is used as `-1/6`.
