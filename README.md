@@ -14,7 +14,7 @@ Ensure you have Python installed on your machine (Python 3.6 or later is recomme
 - Scikit-Learn
 - Statsmodels
 
-You can install these packages using pip by creating a `requirements.txt` file with all the needed packages and then running:
+You can install these packages using pip by running:
 ```bash
 pip install -r requirements.txt
 ```
