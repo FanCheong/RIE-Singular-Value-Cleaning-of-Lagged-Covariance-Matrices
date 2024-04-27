@@ -43,4 +43,4 @@ python phi_AR.py
 ## Notes on Implementation
 
 ### Exponent Discrepancy
-Please note that there is a discrepancy in the exponent values referenced in the project. The original paper referenced in this project specifies the exponent as `-1/12`. However, in the implementation within this codebase, as well as in the inaugural lecture, the exponent is used as `-1/6`.
+Please note that there is a discrepancy in the exponent values referenced in the project. The original paper referenced in this project specifies the exponent as `-1/12`. However, in the implementation within this codebase, the source's codebase, and in the inaugural lecture, the exponent is used as `-1/6`.
