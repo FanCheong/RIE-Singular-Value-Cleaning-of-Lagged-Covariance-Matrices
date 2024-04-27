@@ -1,7 +1,7 @@
 # RIE Singular Value Cleaning of Lagged Covariance Matrices
 
 ## Overview
-This repository contains the code for Bryan's COMP0029 final year project, which focuses on the singular value cleaning of lagged covariance matrices. The project implements and visualises the effectiveness of the Rotationally Invariant Estimator (RIE) method in statistical analysis of high-dimensional time series data.
+This repository contains the code for FXWS1's COMP0029 final year project, which focuses on the singular value cleaning of lagged covariance matrices. The project implements and visualises the effectiveness of the Rotationally Invariant Estimator (RIE) method in statistical analysis of high-dimensional time series data.
 
 ## Getting Started
 
@@ -14,7 +14,6 @@ Ensure you have Python installed on your machine (Python 3.6 or later is recomme
 - Scikit-Learn
 - Statsmodels
 
-You can install these packages using pip by running:
 You can install these packages using pip by running:
 ```bash
 pip install -r requirements.txt
