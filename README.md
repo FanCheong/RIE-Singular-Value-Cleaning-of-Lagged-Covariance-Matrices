@@ -15,6 +15,7 @@ Ensure you have Python installed on your machine (Python 3.6 or later is recomme
 - Statsmodels
 
 You can install these packages using pip by running:
+You can install these packages using pip by running:
 ```bash
 pip install -r requirements.txt
 ```
